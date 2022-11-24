@@ -13,7 +13,7 @@ class Ui_MainWindow(object):
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        self.setWindowIcon(QtGui.QIcon('icon.png'))
+        self.setWindowIcon(QtGui.QIcon('files/icon.png'))
         MainWindow.resize(724, 804)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
@@ -162,7 +162,7 @@ class MainWidget(QMainWindow, Ui_MainWindow):
 
         self.bright_palette = app.palette()
 
-        with open("samples.txt", "r", encoding="utf-8") as text:
+        with open("files/samples.txt", "r", encoding="utf-8") as text:
             self.default_text = text.read().split(', ')
 
         self.startBtn.clicked.connect(self.execute)
@@ -316,7 +316,7 @@ class MainWidget(QMainWindow, Ui_MainWindow):
         dialog.show()
 
     def makeRecord(self):
-        conn = sqlite3.connect('database.sqlite')
+        conn = sqlite3.connect('files/database.sqlite')
         c = conn.cursor()
 
         c.execute("""CREATE TABLE IF NOT EXISTS stats (
@@ -408,7 +408,7 @@ class StatsWidget(QMainWindow):
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        self.setWindowIcon(QtGui.QIcon('icon.png'))
+        self.setWindowIcon(QtGui.QIcon('files/icon.png'))
         MainWindow.resize(752, 466)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
@@ -469,7 +469,7 @@ class StatsWidget(QMainWindow):
     def showStats(self):
         self.graphicsView.clear()
 
-        conn = sqlite3.connect('database.sqlite')
+        conn = sqlite3.connect('files/database.sqlite')
         c = conn.cursor()
 
         c.execute("""CREATE TABLE IF NOT EXISTS stats (
