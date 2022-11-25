@@ -178,6 +178,8 @@ class MainWidget(QMainWindow, Ui_MainWindow):
         self.timer.timeout.connect(self.onTimeout)
         self.time = 60
 
+        self.minutes, self.seconds = '1', '00'
+
         self.index = 0
         self.checker = QtCore.QTimer()
         self.checker.setInterval(10)
@@ -209,7 +211,7 @@ class MainWidget(QMainWindow, Ui_MainWindow):
     def execute(self):
         self.plainEdit.setPlainText('')
         if self.startBtn.text() == 'Начать':
-            self.label_1.setText(f'Время   1:00')
+            self.label_1.setText(f'Время   {self.minutes}:{self.seconds}')
             self.startBtn.setText('Остановить')
 
             self.statsBtn.setEnabled(False)
@@ -255,16 +257,17 @@ class MainWidget(QMainWindow, Ui_MainWindow):
     def onTimeout(self):
         self.time -= 1
 
-        minutes, seconds = self.time // 60, self.time % 60 if (self.time % 60) >= 10 else '0' + str(self.time % 60)
-        self.label_1.setText(f'Время   {minutes}:{seconds}')
+        self.minutes, self.seconds = self.time // 60, self.time % 60 if (self.time % 60) >= 10 else '0' + str(
+            self.time % 60)
+        self.label_1.setText(f'Время   {self.minutes}:{self.seconds}')
 
-        self.time_pb.setValue(int(self.time/60*100))
+        self.time_pb.setValue(int(self.time / 60 * 100))
         if self.time == 0:
             self.checker.stop()
             self.timer.stop()
 
             msg = QMessageBox(self)
-            msg.setWindowIcon(QIcon("icon.png"))
+            msg.setWindowIcon(QIcon("files/icon.png"))
             msg.setWindowTitle("Результат")
             msg.setIcon(QMessageBox.Information)
             msg.setText("Вы завершили тест, вот ваши результаты: ")
@@ -400,11 +403,29 @@ class StatsWidget(QMainWindow):
         super(StatsWidget, self).__init__(parent)
         self.setupUi(self)
 
+        self.bright_palette = app.palette()
+
         self.comboBox.addItems(["За последние 7 дней", "За последние 30 дней", "За все время"])
         self.comboBox.activated.connect(self.showStats)
 
         self.speedCB.toggled.connect(self.showStats)
         self.accuracyCB.toggled.connect(self.showStats)
+
+        bar = self.menuBar()
+        bar.hide()
+
+        self.menu = bar.addMenu("Menu")
+
+        theme = self.menu.addMenu("Выбрать тему")
+        theme.addAction("светлая")
+        theme.addAction("темная")
+
+        theme.triggered.connect(self.changeTheme)
+
+        quit = QAction("Выйти", self)
+        quit.setShortcut("Ctrl+Q")
+        quit.triggered.connect(self.close)
+        self.menu.addAction(quit)
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -508,6 +529,35 @@ class StatsWidget(QMainWindow):
             self.graphicsView.plot(xs, y_accuracy, pen='b')
 
         conn.close()
+
+    def contextMenuEvent(self, event):
+        result = self.menu.exec_(self.mapToGlobal(event.pos()))
+
+    def changeTheme(self, action):
+        theme = action.text()
+        if theme == 'светлая':
+            app.setPalette(self.bright_palette)
+            app.setStyleSheet("")
+        else:
+            dark_palette = QPalette()
+
+            dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.WindowText, Qt.white)
+            dark_palette.setColor(QPalette.Base, QColor(25, 25, 25))
+            dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.ToolTipBase, Qt.white)
+            dark_palette.setColor(QPalette.ToolTipText, Qt.white)
+            dark_palette.setColor(QPalette.Text, Qt.white)
+            dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.ButtonText, Qt.white)
+            dark_palette.setColor(QPalette.BrightText, Qt.red)
+            dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
+            dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+            dark_palette.setColor(QPalette.HighlightedText, Qt.black)
+
+            app.setPalette(dark_palette)
+
+            app.setStyleSheet("QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }")
 
 
 if __name__ == "__main__":
