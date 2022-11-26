@@ -6,7 +6,6 @@ from datetime import date
 from pyqtgraph import PlotWidget
 import sqlite3
 import sys
-import random
 
 
 class Ui_MainWindow(object):
@@ -159,11 +158,10 @@ class MainWidget(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-
         self.bright_palette = app.palette()
 
-        with open("files/samples.txt", "r", encoding="utf-8") as text:
-            self.default_text = text.read().split(', ')
+        self.filepath, self.sample_text, self.theme, self.time = '', '', 0, 1
+        self.loadSettings()
 
         self.startBtn.clicked.connect(self.execute)
         self.statsBtn.clicked.connect(self.openStats)
@@ -176,9 +174,6 @@ class MainWidget(QMainWindow, Ui_MainWindow):
         self.timer = QtCore.QTimer()
         self.timer.setInterval(1000)
         self.timer.timeout.connect(self.onTimeout)
-        self.time = 60
-
-        self.minutes, self.seconds = '1', '00'
 
         self.index = 0
         self.checker = QtCore.QTimer()
@@ -199,6 +194,10 @@ class MainWidget(QMainWindow, Ui_MainWindow):
 
         theme.triggered.connect(self.changeTheme)
 
+        settings = QAction("Настройки", self)
+        settings.triggered.connect(self.openSettings)
+        self.menu.addAction(settings)
+
         openFile = QAction("Открыть файл...", self)
         openFile.triggered.connect(self.chooseFile)
         self.menu.addAction(openFile)
@@ -211,6 +210,10 @@ class MainWidget(QMainWindow, Ui_MainWindow):
     def execute(self):
         self.plainEdit.setPlainText('')
         if self.startBtn.text() == 'Начать':
+
+            self.minutes, self.seconds = self.default_time // 60, self.default_time % 60 \
+                if (self.default_time % 60) >= 10 else '0' + str(self.default_time % 60)
+
             self.label_1.setText(f'Время   {self.minutes}:{self.seconds}')
             self.startBtn.setText('Остановить')
 
@@ -221,9 +224,9 @@ class MainWidget(QMainWindow, Ui_MainWindow):
                 if self.text is not None:
                     self.plainSample.setPlainText(self.text)
                 else:
-                    self.plainSample.setPlainText(' '.join(random.sample(self.default_text, 100)))
+                    self.plainSample.setPlainText(self.default_text)
             except AttributeError:
-                self.plainSample.setPlainText(' '.join(random.sample(self.default_text, 100)))
+                self.plainSample.setPlainText(self.default_text)
 
             self.plainEdit.setReadOnly(False)
 
@@ -238,10 +241,10 @@ class MainWidget(QMainWindow, Ui_MainWindow):
             self.statsBtn.setEnabled(True)
             self.statsCB.setEnabled(True)
 
-            self.plainSample.setPlainText('Пример текста')
+            self.plainSample.setPlainText(self.sample_text)
             self.plainEdit.setReadOnly(True)
 
-            self.time = 60
+            self.time = self.default_time
             self.speed_lab.setText("0 символов / мин.")
             self.accuracy_lab.setText("100%")
             self.time_pb.setValue(100)
@@ -261,7 +264,7 @@ class MainWidget(QMainWindow, Ui_MainWindow):
             self.time % 60)
         self.label_1.setText(f'Время   {self.minutes}:{self.seconds}')
 
-        self.time_pb.setValue(int(self.time / 60 * 100))
+        self.time_pb.setValue(int(self.time / self.default_time * 100))
         if self.time == 0:
             self.checker.stop()
             self.timer.stop()
@@ -311,11 +314,19 @@ class MainWidget(QMainWindow, Ui_MainWindow):
                     self.mistakes += 1
             self.index += 1
 
-        self.speed = round((sym_number + 1) / ((60 - self.time) / 60), 1) if self.time != 60 else 0
+        self.speed = round((sym_number + 1) / ((self.default_time - self.time) / 60), 1) \
+            if self.time != self.default_time else 0
         self.accuracy = int(100 - (self.mistakes / (sym_number + 1) * 100)) if sym_number + 1 != 0 else 100
 
     def openStats(self):
         dialog = StatsWidget(self)
+        dialog.show()
+
+    def openSettings(self):
+        if self.startBtn.text() == 'Остановить':
+            return None
+
+        dialog = SettingsWidget(self)
         dialog.show()
 
     def makeRecord(self):
@@ -395,6 +406,65 @@ class MainWidget(QMainWindow, Ui_MainWindow):
         self.text = test_file[:length]
         if ok_pressed:
             self.execute()
+
+    def loadSettings(self):
+        conn = sqlite3.connect('files/database.sqlite')
+        c = conn.cursor()
+
+        c.execute("""CREATE TABLE IF NOT EXISTS settings (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT
+                               NOT NULL
+                               UNIQUE,
+            filename   STRING  NOT NULL,
+            time       INTEGER NOT NULL,
+            theme      BOOLEAN NOT NULL,
+            sampletext STRING  NOT NULL
+        );""")
+
+        if len(list(c.execute("""select * from settings"""))) == 0:
+            c.execute(f'''insert into settings values (1, "files/samples.txt", 60, 0, "Пример текста")''')
+
+        res = list(c.execute("""select * from settings"""))
+        self.filepath = res[0][1]
+        self.time = res[0][2]
+        self.theme = res[0][3]
+
+        if self.theme == 0:
+            app.setPalette(self.bright_palette)
+            app.setStyleSheet("")
+        else:
+            dark_palette = QPalette()
+
+            dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.WindowText, Qt.white)
+            dark_palette.setColor(QPalette.Base, QColor(25, 25, 25))
+            dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.ToolTipBase, Qt.white)
+            dark_palette.setColor(QPalette.ToolTipText, Qt.white)
+            dark_palette.setColor(QPalette.Text, Qt.white)
+            dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.ButtonText, Qt.white)
+            dark_palette.setColor(QPalette.BrightText, Qt.red)
+            dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
+            dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+            dark_palette.setColor(QPalette.HighlightedText, Qt.black)
+
+            app.setPalette(dark_palette)
+
+            app.setStyleSheet("QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }")
+
+        self.sample_text = res[0][4]
+        self.plainSample.setPlainText(self.sample_text)
+
+        self.default_time = self.time
+        self.minutes, self.seconds = self.default_time // 60, self.default_time % 60 \
+            if (self.default_time % 60) >= 10 else '0' + str(self.default_time % 60)
+
+        with open(self.filepath, "r", encoding="utf-8") as text:
+            self.default_text = text.read()
+
+        conn.commit()
+        conn.close()
 
 
 class StatsWidget(QMainWindow):
@@ -558,6 +628,190 @@ class StatsWidget(QMainWindow):
             app.setPalette(dark_palette)
 
             app.setStyleSheet("QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }")
+
+
+class SettingsWidget(QMainWindow):
+
+    def __init__(self, parent=None):
+        super(SettingsWidget, self).__init__(parent)
+        print()
+        self.setupUi(self)
+
+        self.filepath, self.time, self.theme, self.sample_text = None, None, None, None
+        self.themeCB.addItems(["Светлая тема", "Темная тема"])
+
+        self.fileButton.clicked.connect(self.chooseFile)
+        self.pushButton_2.clicked.connect(self.commitToDB)
+        self.pushButton.clicked.connect(self.close)
+        self.filenameLine.setReadOnly(True)
+
+        self.loadSettings()
+
+    def setupUi(self, MainWindow):
+        MainWindow.setObjectName("MainWindow")
+        MainWindow.setEnabled(True)
+        MainWindow.resize(506, 372)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
+        MainWindow.setSizePolicy(sizePolicy)
+        MainWindow.setMinimumSize(QtCore.QSize(506, 372))
+        MainWindow.setMaximumSize(QtCore.QSize(506, 372))
+        font = QtGui.QFont()
+        font.setPointSize(8)
+        MainWindow.setFont(font)
+        MainWindow.setToolTip("")
+        MainWindow.setAnimated(True)
+        self.centralwidget = QtWidgets.QWidget(MainWindow)
+        self.centralwidget.setObjectName("centralwidget")
+        self.gridLayout_2 = QtWidgets.QGridLayout(self.centralwidget)
+        self.gridLayout_2.setObjectName("gridLayout_2")
+        self.gridLayout = QtWidgets.QGridLayout()
+        self.gridLayout.setHorizontalSpacing(10)
+        self.gridLayout.setVerticalSpacing(50)
+        self.gridLayout.setObjectName("gridLayout")
+        self.label = QtWidgets.QLabel(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI Semilight")
+        font.setPointSize(12)
+        self.label.setFont(font)
+        self.label.setObjectName("label")
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+        self.label_2 = QtWidgets.QLabel(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI Semilight")
+        font.setPointSize(12)
+        self.label_2.setFont(font)
+        self.label_2.setObjectName("label_2")
+        self.gridLayout.addWidget(self.label_2, 6, 0, 1, 1)
+        self.label_3 = QtWidgets.QLabel(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI Semilight")
+        font.setPointSize(12)
+        self.label_3.setFont(font)
+        self.label_3.setObjectName("label_3")
+        self.gridLayout.addWidget(self.label_3, 3, 0, 1, 1)
+        self.filenameLine = QtWidgets.QLineEdit(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI Semilight")
+        font.setPointSize(10)
+        self.filenameLine.setFont(font)
+        self.filenameLine.setObjectName("filenameLine")
+        self.gridLayout.addWidget(self.filenameLine, 0, 1, 1, 1)
+        self.label_4 = QtWidgets.QLabel(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI Semilight")
+        font.setPointSize(12)
+        self.label_4.setFont(font)
+        self.label_4.setObjectName("label_4")
+        self.gridLayout.addWidget(self.label_4, 4, 0, 1, 1)
+        self.pushButton = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton.setObjectName("pushButton")
+        self.gridLayout.addWidget(self.pushButton, 7, 2, 1, 1)
+        self.pushButton_2 = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton_2.setObjectName("pushButton_2")
+        self.gridLayout.addWidget(self.pushButton_2, 7, 1, 1, 1)
+        self.timel = QtWidgets.QSpinBox(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI Semilight")
+        font.setPointSize(10)
+        self.timel.setFont(font)
+        self.timel.setAccelerated(True)
+        self.timel.setMinimum(30)
+        self.timel.setMaximum(600)
+        self.timel.setSingleStep(5)
+        self.timel.setProperty("value", 60)
+        self.timel.setObjectName("time")
+        self.gridLayout.addWidget(self.timel, 3, 1, 1, 2)
+        self.themeCB = QtWidgets.QComboBox(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI Semilight")
+        font.setPointSize(10)
+        self.themeCB.setFont(font)
+        self.themeCB.setCurrentText("")
+        self.themeCB.setObjectName("themeCB")
+        self.gridLayout.addWidget(self.themeCB, 4, 1, 1, 2)
+        self.sample = QtWidgets.QLineEdit(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Segoe UI Semilight")
+        font.setPointSize(10)
+        self.sample.setFont(font)
+        self.sample.setObjectName("sample")
+        self.gridLayout.addWidget(self.sample, 6, 1, 1, 2)
+        self.fileButton = QtWidgets.QToolButton(self.centralwidget)
+        self.fileButton.setObjectName("fileButton")
+        self.gridLayout.addWidget(self.fileButton, 0, 2, 1, 2)
+        self.gridLayout_2.addLayout(self.gridLayout, 0, 0, 1, 1)
+        MainWindow.setCentralWidget(self.centralwidget)
+        self.menubar = QtWidgets.QMenuBar(MainWindow)
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 506, 19))
+        self.menubar.setObjectName("menubar")
+        MainWindow.setMenuBar(self.menubar)
+        self.statusbar = QtWidgets.QStatusBar(MainWindow)
+        self.statusbar.setObjectName("statusbar")
+        MainWindow.setStatusBar(self.statusbar)
+
+        self.retranslateUi(MainWindow)
+        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def retranslateUi(self, MainWindow):
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", "Настройки"))
+        self.label.setText(_translate("MainWindow", "Файл текста теста по умолчанию"))
+        self.label_2.setText(_translate("MainWindow", "Текст примера"))
+        self.label_3.setText(_translate("MainWindow", "Время на тест, в секундах"))
+        self.filenameLine.setText(_translate("MainWindow", "files/samples.txt"))
+        self.label_4.setText(_translate("MainWindow", "Оформление приложения"))
+        self.pushButton.setText(_translate("MainWindow", "Ок"))
+        self.pushButton_2.setText(_translate("MainWindow", "Применить"))
+        self.sample.setText(_translate("MainWindow", "Пример текста"))
+        self.fileButton.setText(_translate("MainWindow", "..."))
+
+    def loadSettings(self):
+        conn = sqlite3.connect('files/database.sqlite')
+        c = conn.cursor()
+
+        res = list(c.execute("""select * from settings"""))
+
+        self.filepath = res[0][1]
+        self.time = res[0][2]
+        self.theme = res[0][3]
+        self.sample_text = res[0][4]
+
+        self.filenameLine.setText(self.filepath)
+        self.timel.setValue(self.time)
+        self.sample.setText(self.sample_text)
+
+        self.themeCB.setCurrentIndex(self.theme)
+
+    def chooseFile(self):
+        filepath = QFileDialog.getOpenFileName(self, 'Выбрать файл', '', 'Текстовый файл (*.txt);;Все файлы (*)')[0]
+
+        try:
+            open(filepath, "r", encoding="utf-8").read()
+        except FileNotFoundError:
+            return None
+
+        self.filenameLine.setText(filepath)
+
+    def commitToDB(self):
+        conn = sqlite3.connect('files/database.sqlite')
+        c = conn.cursor()
+
+        c.execute(f"""UPDATE settings SET filename = '{self.filenameLine.text()}'""")
+        c.execute(f"""UPDATE settings SET time = {self.timel.value()}""")
+        c.execute(f"""UPDATE settings SET theme = {self.themeCB.currentIndex()}""")
+        c.execute(f"""UPDATE settings SET sampletext = '{self.sample.text()}'""")
+
+        conn.commit()
+
+        MainWidget.loadSettings(ex)
+
+        conn.close()
+
+    def changeTheme(self):
+        pass
 
 
 if __name__ == "__main__":
