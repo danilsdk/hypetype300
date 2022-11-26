@@ -1,7 +1,8 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QTextCharFormat, QColor, QPen, QTextCursor, QIcon, QPalette
-from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QAction, QFileDialog, QInputDialog, QProgressBar
+from PyQt5.QtGui import QTextCharFormat, QColor, QPen, QTextCursor, QIcon, QPalette, QFont
+from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QAction, QFileDialog, QInputDialog, QProgressBar, \
+    QStyle
 from datetime import date
 from pyqtgraph import PlotWidget
 import sqlite3
@@ -76,12 +77,13 @@ class Ui_MainWindow(object):
         self.plainSample = QtWidgets.QPlainTextEdit(self.centralwidget)
         self.plainEdit.setReadOnly(True)
         self.plainSample.setEnabled(False)
-        font = QtGui.QFont()
-        font.setFamily("Segoe UI Semibold")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.plainSample.setFont(font)
+        font1 = QtGui.QFont()
+        font1.setFamily("Segoe UI Semibold")
+        font1.setPointSize(14)
+        font1.setBold(False)
+        font1.setStyleHint(QFont.TypeWriter)
+        font1.setWeight(75)
+        self.plainSample.setFont(font1)
         self.plainSample.setMouseTracking(False)
         self.plainSample.setAutoFillBackground(False)
         self.plainSample.setObjectName("plainSample")
@@ -160,6 +162,7 @@ class MainWidget(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.bright_palette = app.palette()
 
+        self.n = 0
         self.filepath, self.sample_text, self.theme, self.time = '', '', 0, 1
         self.loadSettings()
 
@@ -234,6 +237,14 @@ class MainWidget(QMainWindow, Ui_MainWindow):
             self.timer.start(1000)
 
         else:
+            self.n = 0
+
+            cursor = self.plainSample.textCursor()
+            cursor.select(QtGui.QTextCursor.Document)
+            cursor.setCharFormat(QtGui.QTextCharFormat())
+            cursor.clearSelection()
+            self.plainSample.setTextCursor(cursor)
+
             self.label_1.setText(f'Время')
             self.text = None
 
@@ -259,6 +270,14 @@ class MainWidget(QMainWindow, Ui_MainWindow):
 
     def onTimeout(self):
         self.time -= 1
+
+        if self.time == self.default_time - 1:
+            for _ in range(11):
+                self.plainSample.moveCursor(QtGui.QTextCursor.Down)
+
+        if len(self.plainEdit.toPlainText()) >= 720 + self.n * 57:
+            self.plainSample.moveCursor(QtGui.QTextCursor.Down)
+            self.n += 1
 
         self.minutes, self.seconds = self.time // 60, self.time % 60 if (self.time % 60) >= 10 else '0' + str(
             self.time % 60)
@@ -403,7 +422,7 @@ class MainWidget(QMainWindow, Ui_MainWindow):
             self, "Введите длину текста", f"Выбранный файл - {filename}",
             test_length // 2, 1, test_length, 10)
 
-        self.text = test_file[:length]
+        self.text = test_file[:length].replace('\n', '')
         if ok_pressed:
             self.execute()
 
@@ -461,7 +480,7 @@ class MainWidget(QMainWindow, Ui_MainWindow):
             if (self.default_time % 60) >= 10 else '0' + str(self.default_time % 60)
 
         with open(self.filepath, "r", encoding="utf-8") as text:
-            self.default_text = text.read()
+            self.default_text = text.read().replace('\n', '')
 
         conn.commit()
         conn.close()
