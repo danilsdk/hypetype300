@@ -1,15 +1,69 @@
+# Тест скорости печати на основе PyQt5
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QTextCharFormat, QColor, QPen, QTextCursor, QIcon, QPalette, QFont
-from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QAction, QFileDialog, QInputDialog, QProgressBar, \
-    QStyle
+from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QAction, QFileDialog, QInputDialog, QProgressBar
 from datetime import date
 from pyqtgraph import PlotWidget
 import sqlite3
 import sys
 
 
-class Ui_MainWindow(object):
+class MainWidget(QMainWindow):  # Основное окно приложения
+    def __init__(self, parent=None):
+        super(MainWidget, self).__init__(parent)
+        self.setupUi(self)
+
+        self.bright_palette = app.palette()
+
+        self.scroll_k = 0
+        self.filepath, self.sample_text, self.theme, self.time = '', '', 0, 1
+        self.minutes, self.seconds = 0, 0
+        self.loadSettings()
+
+        self.startBtn.clicked.connect(self.execute)
+        self.statsBtn.clicked.connect(self.openStats)
+
+        self.mistakes = 0
+        self.speed = 0
+        self.accuracy = 100
+        self.mistake_list = []
+
+        self.timer = QtCore.QTimer()
+        self.timer.setInterval(1000)
+        self.timer.timeout.connect(self.onTimeout)
+
+        self.index = 0
+        self.checker = QtCore.QTimer()
+        self.checker.setInterval(10)
+        self.checker.timeout.connect(self.checkMistakes)
+
+        self.format = QTextCharFormat()
+        self.format.setTextOutline(QPen(QColor("red")))
+
+        bar = self.menuBar()
+        bar.hide()
+
+        self.menu = bar.addMenu("Menu")
+
+        theme = self.menu.addMenu("Выбрать тему")
+        theme.addAction("светлая")
+        theme.addAction("темная")
+
+        theme.triggered.connect(self.changeTheme)
+
+        settings = QAction("Настройки", self)
+        settings.triggered.connect(self.openSettings)
+        self.menu.addAction(settings)
+
+        openFile = QAction("Открыть файл...", self)
+        openFile.triggered.connect(self.chooseFile)
+        self.menu.addAction(openFile)
+
+        quit = QAction("Выйти", self)
+        quit.setShortcut("Ctrl+Q")
+        quit.triggered.connect(app.quit)
+        self.menu.addAction(quit)
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -154,63 +208,7 @@ class Ui_MainWindow(object):
         self.label_3.setText(_translate("MainWindow", "Точность"))
         self.startBtn.setText(_translate("MainWindow", "Начать"))
 
-
-class MainWidget(QMainWindow, Ui_MainWindow):
-
-    def __init__(self):
-        super().__init__()
-        self.setupUi(self)
-        self.bright_palette = app.palette()
-
-        self.n = 0
-        self.filepath, self.sample_text, self.theme, self.time = '', '', 0, 1
-        self.loadSettings()
-
-        self.startBtn.clicked.connect(self.execute)
-        self.statsBtn.clicked.connect(self.openStats)
-
-        self.mistakes = 0
-        self.speed = 0
-        self.accuracy = 100
-        self.mistake_list = []
-
-        self.timer = QtCore.QTimer()
-        self.timer.setInterval(1000)
-        self.timer.timeout.connect(self.onTimeout)
-
-        self.index = 0
-        self.checker = QtCore.QTimer()
-        self.checker.setInterval(10)
-        self.checker.timeout.connect(self.checkMistakes)
-
-        self.format = QTextCharFormat()
-        self.format.setTextOutline(QPen(QColor("red")))
-
-        bar = self.menuBar()
-        bar.hide()
-
-        self.menu = bar.addMenu("Menu")
-
-        theme = self.menu.addMenu("Выбрать тему")
-        theme.addAction("светлая")
-        theme.addAction("темная")
-
-        theme.triggered.connect(self.changeTheme)
-
-        settings = QAction("Настройки", self)
-        settings.triggered.connect(self.openSettings)
-        self.menu.addAction(settings)
-
-        openFile = QAction("Открыть файл...", self)
-        openFile.triggered.connect(self.chooseFile)
-        self.menu.addAction(openFile)
-
-        quit = QAction("Выйти", self)
-        quit.setShortcut("Ctrl+Q")
-        quit.triggered.connect(app.quit)
-        self.menu.addAction(quit)
-
-    def execute(self):
+    def execute(self):  # Метод запуска/остановки теста
         self.plainEdit.setPlainText('')
         if self.startBtn.text() == 'Начать':
 
@@ -237,7 +235,7 @@ class MainWidget(QMainWindow, Ui_MainWindow):
             self.timer.start(1000)
 
         else:
-            self.n = 0
+            self.scroll_k = 0
 
             cursor = self.plainSample.textCursor()
             cursor.select(QtGui.QTextCursor.Document)
@@ -268,16 +266,16 @@ class MainWidget(QMainWindow, Ui_MainWindow):
             self.checker.stop()
             self.timer.stop()
 
-    def onTimeout(self):
+    def onTimeout(self):  # Метод для обновления данных во время теста
         self.time -= 1
 
         if self.time == self.default_time - 1:
             for _ in range(11):
                 self.plainSample.moveCursor(QtGui.QTextCursor.Down)
 
-        if len(self.plainEdit.toPlainText()) >= 720 + self.n * 57:
+        if len(self.plainEdit.toPlainText()) >= 720 + self.scroll_k * 57:
             self.plainSample.moveCursor(QtGui.QTextCursor.Down)
-            self.n += 1
+            self.scroll_k += 1
 
         self.minutes, self.seconds = self.time // 60, self.time % 60 if (self.time % 60) >= 10 else '0' + str(
             self.time % 60)
@@ -309,7 +307,7 @@ class MainWidget(QMainWindow, Ui_MainWindow):
             msg.exec_()
             self.execute()
 
-    def checkMistakes(self):
+    def checkMistakes(self):  # Метод для проверки ошибок и их выделения цветом
         self.accuracy_lab.setText(f'{self.accuracy}%')
         self.speed_lab.setText(f'{self.speed} символов / мин.')
 
@@ -337,18 +335,18 @@ class MainWidget(QMainWindow, Ui_MainWindow):
             if self.time != self.default_time else 0
         self.accuracy = int(100 - (self.mistakes / (sym_number + 1) * 100)) if sym_number + 1 != 0 else 100
 
-    def openStats(self):
+    def openStats(self):  # Метод открывает окно статистики
         dialog = StatsWidget(self)
         dialog.show()
 
-    def openSettings(self):
+    def openSettings(self):  # Метод открывает окно настроек
         if self.startBtn.text() == 'Остановить':
             return None
 
         dialog = SettingsWidget(self)
         dialog.show()
 
-    def makeRecord(self):
+    def makeRecord(self):  # Метод для записи результата теста в базу данных
         conn = sqlite3.connect('files/database.sqlite')
         c = conn.cursor()
 
@@ -374,10 +372,10 @@ class MainWidget(QMainWindow, Ui_MainWindow):
         conn.commit()
         conn.close()
 
-    def contextMenuEvent(self, event):
+    def contextMenuEvent(self, event):  # Метод для вызова контекстного меню
         result = self.menu.exec_(self.mapToGlobal(event.pos()))
 
-    def changeTheme(self, action):
+    def changeTheme(self, action):  # Метод для смены оформления приложения
         theme = action.text()
         if theme == 'светлая':
             app.setPalette(self.bright_palette)
@@ -403,7 +401,7 @@ class MainWidget(QMainWindow, Ui_MainWindow):
 
             app.setStyleSheet("QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }")
 
-    def chooseFile(self):
+    def chooseFile(self):  # Метод для выбора кастомного текста из файла для теста
         if self.startBtn.text() == 'Остановить':
             return None
 
@@ -426,7 +424,7 @@ class MainWidget(QMainWindow, Ui_MainWindow):
         if ok_pressed:
             self.execute()
 
-    def loadSettings(self):
+    def loadSettings(self):  # Метод, подгружающий настройки из базы данных
         conn = sqlite3.connect('files/database.sqlite')
         c = conn.cursor()
 
@@ -486,7 +484,7 @@ class MainWidget(QMainWindow, Ui_MainWindow):
         conn.close()
 
 
-class StatsWidget(QMainWindow):
+class StatsWidget(QMainWindow):  # Окно статистики
 
     def __init__(self, parent=None):
         super(StatsWidget, self).__init__(parent)
@@ -576,7 +574,7 @@ class StatsWidget(QMainWindow):
         self.speedCB.setText(_translate("MainWindow", "Скорость"))
         self.accuracyCB.setText(_translate("MainWindow", "Точность"))
 
-    def showStats(self):
+    def showStats(self):  # Метод для отображения графиков
         self.graphicsView.clear()
 
         conn = sqlite3.connect('files/database.sqlite')
@@ -619,10 +617,10 @@ class StatsWidget(QMainWindow):
 
         conn.close()
 
-    def contextMenuEvent(self, event):
+    def contextMenuEvent(self, event):  # Метод для вызова контектсного меню
         result = self.menu.exec_(self.mapToGlobal(event.pos()))
 
-    def changeTheme(self, action):
+    def changeTheme(self, action):  # Метод для смены оформления приложения
         theme = action.text()
         if theme == 'светлая':
             app.setPalette(self.bright_palette)
@@ -787,7 +785,7 @@ class SettingsWidget(QMainWindow):
         self.sample.setText(_translate("MainWindow", "Пример текста"))
         self.fileButton.setText(_translate("MainWindow", "..."))
 
-    def loadSettings(self):
+    def loadSettings(self):  # Метод для подгрузки настроек
         conn = sqlite3.connect('files/database.sqlite')
         c = conn.cursor()
 
@@ -804,7 +802,7 @@ class SettingsWidget(QMainWindow):
 
         self.themeCB.setCurrentIndex(self.theme)
 
-    def chooseFile(self):
+    def chooseFile(self):  # Метод для выбора файла с текстом теста по умолчанию
         filepath = QFileDialog.getOpenFileName(self, 'Выбрать файл', '', 'Текстовый файл (*.txt);;Все файлы (*)')[0]
 
         try:
@@ -814,7 +812,7 @@ class SettingsWidget(QMainWindow):
 
         self.filenameLine.setText(filepath)
 
-    def commitToDB(self):
+    def commitToDB(self):  # Метод для отправки настроек в базу данных
         conn = sqlite3.connect('files/database.sqlite')
         c = conn.cursor()
 
@@ -829,11 +827,8 @@ class SettingsWidget(QMainWindow):
 
         conn.close()
 
-    def changeTheme(self):
-        pass
 
-
-if __name__ == "__main__":
+if __name__ == "__main__":  # Запуск программы
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     ex = MainWidget()
