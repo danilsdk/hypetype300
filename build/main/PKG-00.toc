@@ -1,5 +1,5 @@
 ('C:\\Users\\user\\Desktop\\\xa0\\яндекс '
- 'лицей\\hypetype300\\build\\main\\main.pkg',
+ 'лицей\\hypetype301\\build\\main\\main.pkg',
  {'BINARY': 1,
   'DATA': 1,
   'EXECUTABLE': 1,
@@ -10,27 +10,27 @@
   'SPLASH': 1},
  [('PYZ-00.pyz',
    'C:\\Users\\user\\Desktop\\\xa0\\яндекс '
-   'лицей\\hypetype300\\build\\main\\PYZ-00.pyz',
+   'лицей\\hypetype301\\build\\main\\PYZ-00.pyz',
    'PYZ'),
   ('struct',
    'C:\\Users\\user\\Desktop\\\xa0\\яндекс '
-   'лицей\\hypetype300\\build\\main\\localpycs\\struct.pyc',
+   'лицей\\hypetype301\\build\\main\\localpycs\\struct.pyc',
    'PYMODULE'),
   ('pyimod01_archive',
    'C:\\Users\\user\\Desktop\\\xa0\\яндекс '
-   'лицей\\hypetype300\\build\\main\\localpycs\\pyimod01_archive.pyc',
+   'лицей\\hypetype301\\build\\main\\localpycs\\pyimod01_archive.pyc',
    'PYMODULE'),
   ('pyimod02_importers',
    'C:\\Users\\user\\Desktop\\\xa0\\яндекс '
-   'лицей\\hypetype300\\build\\main\\localpycs\\pyimod02_importers.pyc',
+   'лицей\\hypetype301\\build\\main\\localpycs\\pyimod02_importers.pyc',
    'PYMODULE'),
   ('pyimod03_ctypes',
    'C:\\Users\\user\\Desktop\\\xa0\\яндекс '
-   'лицей\\hypetype300\\build\\main\\localpycs\\pyimod03_ctypes.pyc',
+   'лицей\\hypetype301\\build\\main\\localpycs\\pyimod03_ctypes.pyc',
    'PYMODULE'),
   ('pyimod04_pywin32',
    'C:\\Users\\user\\Desktop\\\xa0\\яндекс '
-   'лицей\\hypetype300\\build\\main\\localpycs\\pyimod04_pywin32.pyc',
+   'лицей\\hypetype301\\build\\main\\localpycs\\pyimod04_pywin32.pyc',
    'PYMODULE'),
   ('pyiboot01_bootstrap',
    'C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\PyInstaller\\loader\\pyiboot01_bootstrap.py',
@@ -54,7 +54,7 @@
    'C:\\Users\\user\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_pyqt5.py',
    'PYSOURCE'),
   ('main',
-   'C:\\Users\\user\\Desktop\\\xa0\\яндекс лицей\\hypetype300\\main.py',
+   'C:\\Users\\user\\Desktop\\\xa0\\яндекс лицей\\hypetype301\\main.py',
    'PYSOURCE')],
  True,
  False,
