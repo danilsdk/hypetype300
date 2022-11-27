@@ -623,7 +623,8 @@ class StatsWidget(QMainWindow):  # Окно статистики
     def changeStatsTheme(self, action):  # Метод для смены оформления приложения
         theme = action.text()
         if theme == 'светлая':
-            MainWidget.changeTheme(self, QAction("светлая"))
+            MainWidget.changeTheme(self, QAction("светлая"))  # Вызов к прошлому классу
+            # во избежание написания такого же кода второй раз
         else:
             MainWidget.changeTheme(self, QAction("темная"))
 
