@@ -629,7 +629,7 @@ class StatsWidget(QMainWindow):  # Окно статистики
             MainWidget.changeTheme(self, QAction("темная"))
 
 
-class SettingsWidget(QMainWindow):
+class SettingsWidget(QMainWindow): # Окно настроек
 
     def __init__(self, parent=None):
         super(SettingsWidget, self).__init__(parent)
