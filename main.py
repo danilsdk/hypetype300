@@ -487,10 +487,9 @@ class MainWidget(QMainWindow):  # Основное окно приложения
 class StatsWidget(QMainWindow):  # Окно статистики
 
     def __init__(self, parent=None):
+        self.bright_palette = app.palette()
         super(StatsWidget, self).__init__(parent)
         self.setupUi(self)
-
-        self.bright_palette = app.palette()
 
         self.comboBox.addItems(["За последние 7 дней", "За последние 30 дней", "За все время"])
         self.comboBox.activated.connect(self.showStats)
@@ -633,7 +632,6 @@ class SettingsWidget(QMainWindow):  # Окно настроек
 
     def __init__(self, parent=None):
         super(SettingsWidget, self).__init__(parent)
-        print()
         self.setupUi(self)
 
         self.filepath, self.time, self.theme, self.sample_text = None, None, None, None
